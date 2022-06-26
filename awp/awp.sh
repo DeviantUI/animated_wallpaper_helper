@@ -48,7 +48,7 @@ cd $Download
 ###############
 
 INPUT=$(zenity --list --title "Animated Wallpaper Helper" --window-icon=/usr/local/share/awp/awp_wallpaper_icon.png --text "What do you want?"\
- --column "Selection" --column "Typ" --radiolist  FALSE "Existing" FALSE "New" TRUE "Start Animated Wallpapers" FALSE "Stop Animated Wallpapers" FALSE "Remove Wallpaper" FALSE "Enable Autostart" FALSE "Disable Autostart" FALSE "Uninstall" FALSE About\
+ --column "Selection" --column "Typ" --radiolist  FALSE "Existing" FALSE "New(YT)" FALSE "New(local)" TRUE "Start Animated Wallpapers" FALSE "Stop Animated Wallpapers" FALSE "Remove Wallpaper" FALSE "Enable Autostart" FALSE "Disable Autostart" FALSE "Uninstall" FALSE About\
  --width=600 --height=350)
 
 
@@ -128,7 +128,7 @@ then
 fi
 
 # Download a new Animated Wallpaper
-if [ "$INPUT" == "New" ]
+if [ "$INPUT" == "New(YT)" ]
 then
 
     LINK=$(zenity --entry --title "Insert link" --text "Link to the video" --width=600)
@@ -162,11 +162,53 @@ then
 
     fi
 
-
     gsettings set org.gnome.desktop.background picture-uri "file://$Bilddir/$NAME.png"\
     && gsettings set org.gnome.desktop.background picture-uri-dark "file://$Bilddir/$NAME.png"\
     && animated-wallpaper "$NAME".* & exit 0
 
+fi
+
+# Install a new Animated Wallpaper(local)
+if [ "$INPUT" == "New(local)" ]
+then
+
+    #FILEPATH=$(zenity --entry --title "Insert path" --text "Path to the video" --width=600)
+    FILEPATH=$(zenity --file-selection --title="Select a Video file" --width=600)
+	if (($? != 0))
+	then
+		zenity --error \
+        --text="Video file isn't selected."
+  		sh "/usr/local/share/awp/awp.sh"
+	fi
+    NAME=$(zenity --entry --title "What should the wallpaper be called?" --text "Without file suffix" --width=600)
+   
+   echo "Convert $FILEPATH to $Download/$NAME.mkv"
+   ffmpeg -i "$FILEPATH" -an "$Download/$NAME.mkv"\
+   | zenity --progress --title "Progress" --text "Convert to mkv" --pulsate --width=200 --auto-close
+
+   echo "remove $Download/$NAME"
+   rm "$Download/$NAME"
+   
+   echo "Generate Picture"
+   ffmpeg -i "$NAME.mkv" -frames:v 1 "./Bild/$NAME.png"
+
+   killall animated-wallpaper
+
+    if [ -f "$VIDEO_LIST" ]; then
+        echo "$VIDEO_LIST exists."
+        read actual_list < "$VIDEO_LIST"
+        echo $actual_list' '$NAME > "$VIDEO_LIST"
+
+    else
+
+        echo "create $VIDEO_LIST"
+        echo $NAME > "$VIDEO_LIST"
+
+    fi
+
+    gsettings set org.gnome.desktop.background picture-uri "file://$Bilddir/$NAME.png"\
+    && gsettings set org.gnome.desktop.background picture-uri-dark "file://$Bilddir/$NAME.png"\
+    && animated-wallpaper "$NAME".* & exit 0
 
 fi
 
